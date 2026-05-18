@@ -34,9 +34,10 @@ jobs:
       - name: Verify bundle exists
         run: test -f custom_components/oikovis_pulse/frontend/pulse.js
 
-      - name: Create zip (preserves custom_components/oikovis_pulse/ structure)
+      - name: Create zip (flat layout for HACS content_in_root)
         run: |
-          zip -r oikovis_pulse.zip custom_components/oikovis_pulse \
+          cd custom_components/oikovis_pulse
+          zip -r "$GITHUB_WORKSPACE/oikovis_pulse.zip" . \
             -x "*.pyc" "*/__pycache__/*" "*.gitkeep"
 
       - name: Detect pre-release
