@@ -6,7 +6,7 @@ file layout will change without warning until 0.1.0.
 ## Development setup
 
 ```bash
-git clone https://github.com/oikovis/pulse.git
+git clone https://github.com/Oikovis/pulse.git
 cd pulse
 cp .env.example .env       # fill in HA_URL, HA_TOKEN, HA_CONFIG_PATH
 cd frontend && pnpm install && pnpm build

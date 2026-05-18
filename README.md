@@ -21,7 +21,7 @@ custom panel with a polished React UI and a small, async-first Python core.
 For now, install as a HACS custom repository:
 
 1. HACS → Integrations → ⋮ → Custom repositories
-2. Repository: `https://github.com/oikovis/pulse`
+2. Repository: `https://github.com/Oikovis/pulse`
 3. Category: Integration
 4. Install, restart Home Assistant
 5. Settings → Devices & Services → Add Integration → "Oikovis Pulse"
