@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Verify bundle exists
+        run: test -f custom_components/oikovis_pulse/frontend/pulse.js
+
+      - name: Create zip (contents at root for HACS)
+        run: |
+          cd custom_components/oikovis_pulse
+          zip -r "$GITHUB_WORKSPACE/oikovis_pulse.zip" . \
+            -x "*.pyc" "*/__pycache__/*" "*.gitkeep"
+
+      - name: Detect pre-release
+        id: prerelease
+        run: |
+          if [[ "${GITHUB_REF_NAME}" =~ -(alpha|beta|rc) ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: oikovis_pulse.zip
+          prerelease: ${{ steps.prerelease.outputs.prerelease == 'true' }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true

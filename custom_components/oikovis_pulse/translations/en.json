@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Pulse",
+        "description": "Add Pulse to your sidebar. No configuration needed — click Submit to continue."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Pulse is already set up. Only one instance is supported."
+    }
+  }
+}
