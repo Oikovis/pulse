@@ -4,6 +4,5 @@
   "homeassistant": "2026.4.0",
   "country": ["GR"],
   "zip_release": true,
-  "filename": "oikovis_pulse.zip",
-  "content_in_root": true
+  "filename": "oikovis_pulse.zip"
 }
