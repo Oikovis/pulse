@@ -73,3 +73,7 @@ CLAUDE.local.md
 .copilot/
 copilot-instructions.md
 .github/copilot-instructions.md
+
+# Local project context — never committed
+PROJECT.md
+LOCAL.md
