@@ -68,21 +68,42 @@ def test_both_empty_lists_return_none() -> None:
     assert resolve_cell_id([], []) is None
 
 
-def test_tie_breaking_with_equal_overlap_count() -> None:
-    """When two cells have identical overlap, first one in list wins."""
+def test_tie_breaking_same_overlap_lexicographic_order() -> None:
+    """When two cells have identical overlap, lex-smallest cell_id wins."""
     # Both c1 and c2 share exactly one uid with incoming
-    stored = [_stored("c1", ["uid-a"]), _stored("c2", ["uid-a"])]
-    result = resolve_cell_id(["uid-a", "uid-x"], stored)
-    # Should be deterministic: first match with max overlap wins
-    assert result == "c1"
+    stored_forward = [_stored("c1", ["uid-a"]), _stored("c2", ["uid-a"])]
+    stored_reverse = [_stored("c2", ["uid-a"]), _stored("c1", ["uid-a"])]
+    result_forward = resolve_cell_id(["uid-a", "uid-x"], stored_forward)
+    result_reverse = resolve_cell_id(["uid-a", "uid-x"], stored_reverse)
+    # Both orders must return c1 (lex-smallest of the tied cells)
+    assert result_forward == "c1"
+    assert result_reverse == "c1"
+    # Both calls must agree on the same id despite different list orders
+    assert result_forward == result_reverse
 
 
-def test_tie_breaking_reversed_order() -> None:
-    """Confirm tie-break is stable and repeatable with reversed list."""
-    stored = [_stored("c2", ["uid-a"]), _stored("c1", ["uid-a"])]
-    result = resolve_cell_id(["uid-a", "uid-x"], stored)
-    # First one in list wins, so now c2
-    assert result == "c2"
+def test_tie_breaking_three_way_tie_lexicographic() -> None:
+    """Three-way tie: all cells overlap by 1, lex-smallest wins regardless of order."""
+    # Create a three-way tie: a, b, c all overlap by 1
+    cells_abc = [
+        _stored("a", ["uid-x"]),
+        _stored("b", ["uid-x"]),
+        _stored("c", ["uid-x"]),
+    ]
+    cells_cab = [
+        _stored("c", ["uid-x"]),
+        _stored("a", ["uid-x"]),
+        _stored("b", ["uid-x"]),
+    ]
+    cells_bca = [
+        _stored("b", ["uid-x"]),
+        _stored("c", ["uid-x"]),
+        _stored("a", ["uid-x"]),
+    ]
+    # All three orderings must return "a" (lex-smallest)
+    assert resolve_cell_id(["uid-x"], cells_abc) == "a"
+    assert resolve_cell_id(["uid-x"], cells_cab) == "a"
+    assert resolve_cell_id(["uid-x"], cells_bca) == "a"
 
 
 def test_partial_overlap_both_directions_stored_larger() -> None:
@@ -182,6 +203,18 @@ def test_multiple_candidates_best_overlap_deterministic() -> None:
         _stored("c3", ["uid-a", "uid-b", "uid-c"]),
     ]
     result = resolve_cell_id(["uid-a", "uid-b"], stored)
-    # c3 has 2 overlaps, c1 has 2 overlaps, c2 has 1 overlap
-    # c1 comes first in list with 2 overlaps, so c1 wins
+    # c3 has 2 overlaps, c1 has 2 overlaps, c2 has 1 overlap.
+    # On tie (both c1 and c3 have 2), lex-smallest wins: c1 < c3.
     assert result == "c1"
+
+
+def test_higher_overlap_beats_lexicographically_smaller_id() -> None:
+    """Higher overlap count always beats lex-smaller cell_id in tie-break."""
+    # c2 is lex-smaller but has lower overlap; b has higher overlap
+    stored = [
+        _stored("c2", ["uid-x"]),  # overlap: 1, but lex-smaller
+        _stored("b", ["uid-x", "uid-y"]),  # overlap: 2, should win despite lex-larger
+    ]
+    result = resolve_cell_id(["uid-x", "uid-y"], stored)
+    # b should win because 2 overlaps > 1 overlap, even though "c2" < "b"
+    assert result == "b"

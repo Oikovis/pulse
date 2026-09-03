@@ -40,6 +40,12 @@ def resolve_cell_id(
     Matching is by intersection of unique_id sets, never entity ids: renaming a
     device rewrites every entity id at once, and an entity-id identity would
     orphan the cell's replaced-date as a result.
+
+    When multiple stored cells have the same overlap count, the one with the
+    lexicographically smallest cell_id wins. This ensures the result is stable
+    and independent of the order of the stored list, preventing a persisted
+    cell's identity from flipping between restarts and accidentally inheriting
+    another cell's replaced-date.
     """
     incoming = set(member_unique_ids)
     if not incoming:
@@ -49,7 +55,9 @@ def resolve_cell_id(
     best_overlap = 0
     for candidate in stored:
         overlap = len(incoming & set(candidate.member_unique_ids))
-        if overlap > best_overlap:
+        if overlap > best_overlap or (
+            overlap == best_overlap and best_id is not None and candidate.cell_id < best_id
+        ):
             best_overlap = overlap
             best_id = candidate.cell_id
     return best_id
