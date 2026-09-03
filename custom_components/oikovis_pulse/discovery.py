@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Sequence
 
-from .model import BatteryNote, SourceEntity
+from .model import BatteryNote, ReadingKind, SourceEntity
 
 BATTERY_DEVICE_CLASS = "battery"
 
@@ -83,3 +83,54 @@ def group_into_cells(
 
     cells.extend(by_stem.values())
     return cells
+
+
+UNUSABLE_STATES = frozenset({"unavailable", "unknown", "none", ""})
+CRITICAL_MARKERS = ("critical",)
+
+
+def _usable(entity: SourceEntity) -> bool:
+    return entity.state.strip().lower() not in UNUSABLE_STATES
+
+
+def _as_float(state: str) -> float | None:
+    try:
+        return float(state)
+    except (TypeError, ValueError):
+        return None
+
+
+def resolve_reading(
+    members: Sequence[SourceEntity],
+) -> tuple[ReadingKind, float | None, bool, bool]:
+    """Resolve a cell's reading from its usable members.
+
+    Priority is decided by usable state, never by declared unit: a percentage
+    sensor sitting at `unavailable` must not stop a healthy low-battery flag
+    beside it from being read.
+    """
+    percentage: float | None = None
+    low = False
+    critical = False
+    has_usable_flag = False
+
+    for member in members:
+        if not _usable(member):
+            continue
+        if member.unit == "%":
+            value = _as_float(member.state)
+            if value is not None and percentage is None:
+                percentage = value
+            continue
+        has_usable_flag = True
+        if member.state.strip().lower() == "on":
+            if any(marker in member.entity_id for marker in CRITICAL_MARKERS):
+                critical = True
+            else:
+                low = True
+
+    if percentage is not None:
+        return ReadingKind.PERCENTAGE, percentage, low, critical
+    if has_usable_flag:
+        return ReadingKind.BINARY, None, low, critical
+    return ReadingKind.NONE, None, False, False
