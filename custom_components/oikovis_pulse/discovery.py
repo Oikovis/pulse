@@ -86,7 +86,6 @@ def group_into_cells(
 
 
 UNUSABLE_STATES = frozenset({"unavailable", "unknown", "none", ""})
-CRITICAL_MARKERS = ("critical",)
 
 
 def _usable(entity: SourceEntity) -> bool:
@@ -100,10 +99,32 @@ def _as_float(state: str) -> float | None:
         return None
 
 
+def _is_critical_flag(entity_id: str) -> bool:
+    """Check if a flag entity is a critical-level flag, not a low-level flag.
+
+    Classification is based on the entity ID's object part ending with
+    _battery_critical (after stripping Home Assistant duplicate-id digits).
+    This avoids false positives from device names containing "critical".
+    """
+    object_id = entity_id.split(".", 1)[-1]
+    object_id = _NUMERIC_SUFFIX.sub("", object_id)
+    return object_id.endswith("_battery_critical")
+
+
 def resolve_reading(
     members: Sequence[SourceEntity],
 ) -> tuple[ReadingKind, float | None, bool, bool]:
     """Resolve a cell's reading from its usable members.
+
+    Returns (kind, percentage, low, critical) where:
+    - kind: PERCENTAGE if any percentage is usable, else BINARY if any flag is
+      usable, else NONE
+    - percentage: the first usable percentage value, or None. Percentages are
+      not clamped; values like -5 or 150 are accepted as-is. Precedence follows
+      members order; callers must supply a stable order.
+    - low, critical: flags representing usable on-state flags. When both
+      percentage and critical flag are usable, the flag wins for alerting and
+      the percentage wins for display — both are returned.
 
     Priority is decided by usable state, never by declared unit: a percentage
     sensor sitting at `unavailable` must not stop a healthy low-battery flag
@@ -124,7 +145,7 @@ def resolve_reading(
             continue
         has_usable_flag = True
         if member.state.strip().lower() == "on":
-            if any(marker in member.entity_id for marker in CRITICAL_MARKERS):
+            if _is_critical_flag(member.entity_id):
                 critical = True
             else:
                 low = True

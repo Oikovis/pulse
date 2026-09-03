@@ -234,8 +234,71 @@ def test_stress_unknown_state_binary_flag() -> None:
 
 def test_stress_none_state_binary_flag() -> None:
     """None state should be treated as unusable."""
-    kind, pct, low, critical = resolve_reading([_entity("binary_sensor.a_battery_low", None, "none")])
+    kind, pct, low, critical = resolve_reading(
+        [_entity("binary_sensor.a_battery_low", None, "none")]
+    )
     assert kind is ReadingKind.NONE
     assert pct is None
     assert low is False
     assert critical is False
+
+
+# Regression tests for critical-vs-low classification fix
+
+
+def test_critical_low_misclassification_device_named_critical() -> None:
+    """Entity from device named 'Critical Alarm' should not be misclassified as critical.
+
+    This is the regression that fixes the loose substring match. The entity ID
+    binary_sensor.critical_alarm_battery_low ends with _battery_low, not
+    _battery_critical, so it should be classified as low, not critical.
+    """
+    kind, pct, low, critical = resolve_reading(
+        [_entity("binary_sensor.critical_alarm_battery_low", None, "on")]
+    )
+    assert kind is ReadingKind.BINARY
+    assert pct is None
+    assert low is True
+    assert critical is False
+
+
+def test_critical_flag_with_exact_suffix() -> None:
+    """Entity ending with _battery_critical should be classified as critical."""
+    kind, pct, low, critical = resolve_reading(
+        [_entity("binary_sensor.a_battery_critical", None, "on")]
+    )
+    assert kind is ReadingKind.BINARY
+    assert pct is None
+    assert low is False
+    assert critical is True
+
+
+def test_critical_flag_with_duplicate_id_digit() -> None:
+    """Duplicate-id digit suffix should be stripped before checking suffix."""
+    kind, pct, low, critical = resolve_reading(
+        [_entity("binary_sensor.a_battery_critical_2", None, "on")]
+    )
+    assert kind is ReadingKind.BINARY
+    assert pct is None
+    assert low is False
+    assert critical is True
+
+
+def test_low_flag_with_exact_suffix() -> None:
+    """Entity ending with _battery_low should be classified as low."""
+    kind, pct, low, critical = resolve_reading([_entity("binary_sensor.a_battery_low", None, "on")])
+    assert kind is ReadingKind.BINARY
+    assert pct is None
+    assert low is True
+    assert critical is False
+
+
+def test_critical_flag_only_in_cell() -> None:
+    """A cell with only a critical flag (no low, no percentage) should read BINARY."""
+    kind, pct, low, critical = resolve_reading(
+        [_entity("binary_sensor.a_battery_critical", None, "on")]
+    )
+    assert kind is ReadingKind.BINARY
+    assert pct is None
+    assert low is False
+    assert critical is True
