@@ -51,6 +51,17 @@ def pick_primary_cell(
     Guessing wrong sends someone to the shop for the wrong battery, so an
     ambiguous device yields no primary cell and the note is surfaced as
     unresolved instead.
+
+    Matching algorithm:
+    1. Filter to cells with percentage members.
+    2. If exactly one such cell, return it.
+    3. Find candidates: cells whose stem has a prefix relationship with the
+       normalised device name (one startswith the other).
+    4. If exactly one candidate, return it.
+    5. If multiple candidates, prefer the one with the smallest mismatch
+       (characters in one that aren't in the other).
+    6. If multiple candidates share the smallest mismatch, return None (ambiguous).
+    7. If no candidates, return None.
     """
     percentage_cells = [
         cell
@@ -63,14 +74,28 @@ def pick_primary_cell(
         return percentage_cells[0].cell_id
 
     target = normalise_name(device_name)
-    exact = [
-        cell
-        for cell in percentage_cells
-        if any(
-            name_stem(member.entity_id) == target
-            for member in members_by_cell.get(cell.cell_id, ())
-        )
-    ]
-    if len(exact) == 1:
-        return exact[0].cell_id
+    candidates: list[tuple[int, str]] = []  # (mismatch_distance, cell_id)
+
+    for cell in percentage_cells:
+        for member in members_by_cell.get(cell.cell_id, ()):
+            stem = name_stem(member.entity_id)
+            if stem.startswith(target):
+                # stem is longer; mismatch is the extra characters in stem
+                mismatch = len(stem) - len(target)
+                candidates.append((mismatch, cell.cell_id))
+                break
+            elif target.startswith(stem):
+                # target is longer; mismatch is the extra characters in target
+                mismatch = len(target) - len(stem)
+                candidates.append((mismatch, cell.cell_id))
+                break
+
+    if not candidates:
+        return None
+
+    min_mismatch = min(c[0] for c in candidates)
+    best = [c[1] for c in candidates if c[0] == min_mismatch]
+
+    if len(best) == 1:
+        return best[0]
     return None
