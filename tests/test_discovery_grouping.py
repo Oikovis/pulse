@@ -67,3 +67,21 @@ def test_entity_level_note_forces_its_own_cell() -> None:
 
 def test_empty_input_produces_no_cells() -> None:
     assert group_into_cells([]) == []
+
+
+def test_device_name_numeric_suffix_not_stripped() -> None:
+    """Device name with trailing digit is distinct from same name without digit."""
+    assert name_stem("sensor.lock_2_battery") == "lock_2"
+    assert name_stem("sensor.lock_battery") == "lock"
+    assert name_stem("sensor.lock_2_battery") != name_stem("sensor.lock_battery")
+
+
+def test_multiple_batteries_with_numeric_device_names() -> None:
+    """Two batteries on one device with numeric device names must not merge."""
+    cells = group_into_cells(
+        [
+            _entity("sensor.lock_2_battery", unit="%", state="50"),
+            _entity("sensor.lock_battery", unit="%", state="75"),
+        ]
+    )
+    assert len(cells) == 2, f"Expected 2 separate cells for lock_2 and lock, got {len(cells)}"

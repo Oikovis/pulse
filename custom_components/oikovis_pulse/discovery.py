@@ -57,7 +57,7 @@ def name_stem(entity_id: str) -> str:
         if object_id.endswith(suffix):
             object_id = object_id[: -len(suffix)]
             break
-    return _NUMERIC_SUFFIX.sub("", object_id)
+    return object_id
 
 
 def group_into_cells(
