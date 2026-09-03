@@ -10,6 +10,7 @@ from .classification import classify
 from .discovery import filter_candidates, group_into_cells, resolve_reading
 from .model import BatteryNote, Cell, CellClass, CellMetadata, SourceEntity, Unit
 from .store import StoredCell, new_cell_id, resolve_cell_id
+from .suspicions import flag_suspicions
 
 DEFAULT_LOW_THRESHOLD = 20.0
 
@@ -206,4 +207,5 @@ def build_fleet(
             )
         )
 
+    flag_suspicions(units)
     return units
