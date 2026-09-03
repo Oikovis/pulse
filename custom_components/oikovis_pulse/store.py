@@ -1,4 +1,10 @@
-"""Persistent state Pulse owns: cell identity, overrides, metadata gaps."""
+"""Persistent state Pulse owns: cell identity and class overrides.
+
+Battery Notes remains the system of record for a battery's metadata
+(``battery_type``, ``last_replaced``, ...) in M1: Pulse only reads that data
+live from Battery Notes each refresh and does not keep its own copy. If
+Battery Notes is removed, that metadata is lost with it — Pulse's store
+cannot recover it."""
 
 from __future__ import annotations
 
@@ -22,6 +28,10 @@ class StoredCell:
     cell_id: str
     member_unique_ids: list[str] = field(default_factory=list)
     class_override: str | None = None
+    # Reserved for a future metadata snapshot (e.g. last_replaced) so a cell's
+    # history could survive Battery Notes being removed. In M1 nothing writes
+    # or reads this field; it is not populated. Battery Notes is the system
+    # of record for that metadata today.
     metadata: dict[str, Any] = field(default_factory=dict)
     gone_since: str | None = None
 

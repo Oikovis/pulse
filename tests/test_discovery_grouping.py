@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from custom_components.oikovis_pulse.discovery import group_into_cells, name_stem
+from custom_components.oikovis_pulse.discovery import group_into_cells, name_stem, normalise_name
 from custom_components.oikovis_pulse.model import BatteryNote, SourceEntity
 
 
@@ -85,3 +85,16 @@ def test_multiple_batteries_with_numeric_device_names() -> None:
         ]
     )
     assert len(cells) == 2, f"Expected 2 separate cells for lock_2 and lock, got {len(cells)}"
+
+
+def test_normalise_name_is_unicode_aware() -> None:
+    """A Greek device name must not collapse to the empty string."""
+    assert normalise_name("Πόρτα") != ""
+    assert normalise_name("Πόρτα") != normalise_name("Σαλόνι")
+
+
+def test_normalise_name_ascii_behaviour_is_unchanged() -> None:
+    """Existing ASCII normalisation must be identical to before the fix."""
+    assert normalise_name("Hall Sensor - Main") == "hall_sensor_main"
+    assert normalise_name("  Lock  ") == "lock"
+    assert normalise_name("Select Leak Sensor") == "select_leak_sensor"

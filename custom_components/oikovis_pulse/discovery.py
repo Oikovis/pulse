@@ -10,7 +10,7 @@ from .model import BatteryNote, ReadingKind, SourceEntity
 BATTERY_DEVICE_CLASS = "battery"
 
 _NUMERIC_SUFFIX = re.compile(r"_\d+$")
-_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+_NON_WORD = re.compile(r"[^\w]+", flags=re.UNICODE)
 _BATTERY_SUFFIXES = (
     "_battery_critical",
     "_battery_level",
@@ -45,8 +45,13 @@ def filter_candidates(
 
 
 def normalise_name(text: str) -> str:
-    """Reduce a display name to a comparable key. Shared by every name comparison."""
-    return _NON_ALNUM.sub("_", text.strip().lower()).strip("_")
+    """Reduce a display name to a comparable key. Shared by every name comparison.
+
+    Unicode-aware: uses casefold() and a Unicode word-character class so
+    non-Latin names (Greek, Cyrillic, accented Latin, ...) normalise to a
+    meaningful, non-empty key instead of collapsing to the empty string.
+    """
+    return _NON_WORD.sub("_", text.strip().casefold()).strip("_")
 
 
 def name_stem(entity_id: str) -> str:

@@ -29,6 +29,10 @@ def flag_suspicions(units: list[Unit]) -> None:
     by_key: dict[str, list[Unit]] = {}
     for unit in units:
         key = _key(unit.name)
+        if not key:
+            # A name that normalises to nothing carries no comparable signal;
+            # never group such units together as duplicates.
+            continue
         by_key.setdefault(key, []).append(unit)
 
     for _name_key, group in by_key.items():
@@ -50,9 +54,13 @@ def flag_suspicions(units: list[Unit]) -> None:
         for u in units
         if u.unit_id.startswith("orphan:")
         and any(c.reading_kind is not ReadingKind.NONE for c in u.cells)
+        and normalise_name(name_stem(u.unit_id[len("orphan:") :]))
     }
     for unit in dead:
         target = _key(unit.name)
+        if not target:
+            # No comparable signal; never link on an empty key.
+            continue
         # A dead unit can link to an orphan only if their normalised names are
         # exactly equal (no substring containment).
         if target in orphans:

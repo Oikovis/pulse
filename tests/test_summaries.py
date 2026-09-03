@@ -71,6 +71,18 @@ def test_needing_attention_is_a_union_without_double_counting() -> None:
     assert summarise(units)["cells_needing_attention"] == 1
 
 
+def test_charging_cell_absent_from_low_at_low_percentage() -> None:
+    units = [_unit(_cell("c1", percentage=5.0, charging=True))]
+    assert summarise(units)["cells_low"] == 0
+
+
+def test_charging_cell_with_explicit_critical_counts_in_critical() -> None:
+    units = [_unit(_cell("c1", percentage=80.0, critical=True, charging=True))]
+    counts = summarise(units)
+    assert counts["cells_critical"] == 1
+    assert counts["cells_needing_attention"] == 1
+
+
 def test_serialise_round_trips_key_fields() -> None:
     payload = serialise_fleet([_unit(_cell("c1", percentage=42.0))])
     assert payload[0]["cells"][0]["cell_id"] == "c1"

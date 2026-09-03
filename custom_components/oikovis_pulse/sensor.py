@@ -33,7 +33,9 @@ async def async_setup_entry(
         name="Pulse",
         manufacturer="Oikovis",
     )
-    async_add_entities(PulseSummarySensor(coordinator, key, device_info) for key in SUMMARY_KEYS)
+    async_add_entities(
+        PulseSummarySensor(coordinator, key, device_info, entry.entry_id) for key in SUMMARY_KEYS
+    )
 
 
 class PulseSummarySensor(CoordinatorEntity[PulseCoordinator], SensorEntity):
@@ -42,10 +44,16 @@ class PulseSummarySensor(CoordinatorEntity[PulseCoordinator], SensorEntity):
     _attr_has_entity_name = True
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, coordinator: PulseCoordinator, key: str, device_info: DeviceInfo) -> None:
+    def __init__(
+        self,
+        coordinator: PulseCoordinator,
+        key: str,
+        device_info: DeviceInfo,
+        entry_id: str,
+    ) -> None:
         super().__init__(coordinator)
         self._key = key
-        self._attr_unique_id = f"{DOMAIN}_{key}"
+        self._attr_unique_id = f"{DOMAIN}_{entry_id}_{key}"
         self._attr_name = key.replace("_", " ").capitalize()
         self._attr_device_info = device_info
 

@@ -14,12 +14,30 @@ from .suspicions import flag_suspicions
 
 DEFAULT_LOW_THRESHOLD = 20.0
 
-CHARGING_TYPES = frozenset({"rechargeable"})
+CHARGING_MARKERS = (
+    "rechargeable",
+    "li-ion",
+    "lion",
+    "lipo",
+    "nimh",
+    "nicd",
+    "18650",
+    "built in",
+    "built-in",
+)
 
 
 def _is_charging(battery_type: str | None) -> bool:
-    """A rechargeable cell is charged, never replaced."""
-    return bool(battery_type and battery_type.strip().lower() in CHARGING_TYPES)
+    """A rechargeable cell is charged, never replaced.
+
+    Battery Notes' battery_type is free text (e.g. "Li-ion", "18650", "NiMH"),
+    not a fixed vocabulary, so this matches known rechargeable markers as a
+    substring rather than requiring an exact "rechargeable" value.
+    """
+    if not battery_type:
+        return False
+    normalised = battery_type.strip().lower()
+    return any(marker in normalised for marker in CHARGING_MARKERS)
 
 
 @dataclass(frozen=True)

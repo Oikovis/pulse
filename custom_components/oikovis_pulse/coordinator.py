@@ -8,7 +8,6 @@ from datetime import timedelta
 
 import homeassistant.util.dt as dt_util
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
@@ -114,7 +113,6 @@ class PulseCoordinator(DataUpdateCoordinator[list[Unit]]):
     async def _async_update_data(self) -> list[Unit]:
         entity_registry = er.async_get(self.hass)
         device_registry = dr.async_get(self.hass)
-        ar.async_get(self.hass)
 
         dtos = []
         notes = []

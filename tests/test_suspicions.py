@@ -45,6 +45,33 @@ def test_different_devices_are_not_flagged() -> None:
     assert units[1].duplicate_of is None
 
 
+def test_different_greek_named_units_with_identical_shapes_not_flagged() -> None:
+    """Two unrelated units with different Greek names and identical cell
+    shapes must not be flagged as duplicates.
+
+    Before the Unicode-aware normalise_name fix, both names collapsed to the
+    empty string and would have shared a key, wrongly linking unrelated
+    devices. With the fix each Greek name normalises to its own key.
+    """
+    units = [
+        Unit("d1", "Πόρτα", None, [_cell("c1", ReadingKind.PERCENTAGE, 90.0, "CR2032")]),
+        Unit("d2", "Σαλόνι", None, [_cell("c2", ReadingKind.PERCENTAGE, 90.0, "CR2032")]),
+    ]
+    flag_suspicions(units)
+    assert units[0].duplicate_of is None
+    assert units[1].duplicate_of is None
+
+
+def test_greek_named_units_are_still_flagged_as_duplicates_when_keys_match() -> None:
+    """Sanity check: real (non-empty) Greek keys still catch true duplicates."""
+    units = [
+        Unit("d1", "Πόρτα", None, [_cell("c1", ReadingKind.PERCENTAGE, 90.0, "CR2032")]),
+        Unit("d2", "Πόρτα", None, [_cell("c2", ReadingKind.PERCENTAGE, 90.0, "CR2032")]),
+    ]
+    flag_suspicions(units)
+    assert units[0].duplicate_of == "d1" or units[1].duplicate_of == "d1"
+
+
 def test_dead_unit_plus_orphan_flags_a_link_candidate() -> None:
     """Metadata on the device, the number on an orphan."""
     units = [

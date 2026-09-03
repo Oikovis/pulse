@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from custom_components.oikovis_pulse.fleet import UnitMeta, build_fleet
+from custom_components.oikovis_pulse.fleet import UnitMeta, _is_charging, build_fleet
 from custom_components.oikovis_pulse.model import BatteryNote, CellClass, ReadingKind, SourceEntity
 from custom_components.oikovis_pulse.store import StoredCell
 
@@ -224,3 +224,11 @@ def test_inputs_are_not_mutated() -> None:
     assert notes == notes_copy
     assert units_meta == units_meta_copy
     assert stored == stored_copy
+
+
+def test_li_ion_battery_type_is_charging() -> None:
+    assert _is_charging("Li-ion") is True
+
+
+def test_cr2032_battery_type_is_not_charging() -> None:
+    assert _is_charging("CR2032") is False

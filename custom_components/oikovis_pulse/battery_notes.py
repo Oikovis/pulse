@@ -74,6 +74,10 @@ def pick_primary_cell(
         return percentage_cells[0].cell_id
 
     target = normalise_name(device_name)
+    if not target:
+        # A device name that normalises to nothing gives no signal to match
+        # against; refuse to guess rather than pick an arbitrary cell.
+        return None
     candidates: list[tuple[int, str]] = []  # (mismatch_distance, cell_id)
 
     for cell in percentage_cells:

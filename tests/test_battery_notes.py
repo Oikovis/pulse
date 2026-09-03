@@ -289,6 +289,33 @@ def test_pick_primary_cell_multiple_equal_length_stems_with_equal_mismatch() -> 
     assert result == "c1"
 
 
+def test_pick_primary_cell_greek_device_name_ambiguous_returns_none() -> None:
+    """A Greek device name with two ambiguous percentage cells must refuse to guess."""
+    cells = [Cell("c1", ("sensor.alpha_battery",)), Cell("c2", ("sensor.beta_battery",))]
+    members = {
+        "c1": [_entity("sensor.alpha_battery")],
+        "c2": [_entity("sensor.beta_battery")],
+    }
+    result = pick_primary_cell(cells, members, "Πόρτα")
+    assert result is None
+
+
+def test_pick_primary_cell_greek_device_name_single_percentage_cell() -> None:
+    """A Greek device name with one usable percentage cell resolves to it.
+
+    Entity ids are always ASCII, so a Greek device name can never prefix-match
+    an ASCII stem; the only way a Greek-named device resolves a primary cell
+    is when there is exactly one candidate percentage cell.
+    """
+    cells = [Cell("c1", ("sensor.porta_battery",)), Cell("c2", ("binary_sensor.porta_low",))]
+    members = {
+        "c1": [_entity("sensor.porta_battery")],
+        "c2": [_entity("binary_sensor.porta_low", unit=None, state="off")],
+    }
+    result = pick_primary_cell(cells, members, "Πόρτα")
+    assert result == "c1"
+
+
 def test_pick_primary_cell_no_prefix_match_returns_none() -> None:
     """No prefix relationships between any stem and device name → None."""
     cells = [

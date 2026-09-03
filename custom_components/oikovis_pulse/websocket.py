@@ -14,16 +14,21 @@ from homeassistant.exceptions import HomeAssistantError, ServiceNotFound
 
 from .battery_notes import DOMAIN_BATTERY_NOTES, SERVICE_SET_BATTERY_REPLACED
 from .const import DATA_COORDINATOR, DOMAIN
+from .fleet import DEFAULT_LOW_THRESHOLD
 from .model import Cell, CellClass, ReadingKind, Unit
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def _countable(cell: Cell) -> bool:
-    """Only replaceable, non-charging, non-gone cells enter any summary."""
-    return (
-        cell.cell_class is CellClass.REPLACEABLE and not cell.charging and cell.gone_since is None
-    )
+    """Only replaceable, non-gone cells enter any summary.
+
+    Charging cells are excluded from the low/without-reading counts (a
+    rechargeable cell is not a "replace me" signal) but that exclusion is
+    applied separately for cells_critical: a charging cell reporting
+    critical must never be silenced.
+    """
+    return cell.cell_class is CellClass.REPLACEABLE and cell.gone_since is None
 
 
 def summarise(units: Sequence[Unit]) -> dict[str, int]:
@@ -36,12 +41,27 @@ def summarise(units: Sequence[Unit]) -> dict[str, int]:
         for cell in unit.cells:
             if not _countable(cell):
                 continue
-            threshold = cell.metadata.low_threshold or 20.0
+            threshold = cell.metadata.low_threshold
+            if threshold is None:
+                threshold = DEFAULT_LOW_THRESHOLD
+
+            if cell.critical:
+                # An explicit critical reading is never silenced, charging or not.
+                critical.add(cell.cell_id)
+
+            if cell.charging:
+                continue
+
+            if (
+                not cell.critical
+                and cell.percentage is not None
+                and cell.percentage <= threshold / 2
+            ):
+                critical.add(cell.cell_id)
+
             if cell.reading_kind is ReadingKind.NONE:
                 without_reading.add(cell.cell_id)
                 continue
-            if cell.critical or (cell.percentage is not None and cell.percentage <= threshold / 2):
-                critical.add(cell.cell_id)
             if cell.low or (cell.percentage is not None and cell.percentage <= threshold):
                 low.add(cell.cell_id)
 
