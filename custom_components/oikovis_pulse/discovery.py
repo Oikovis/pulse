@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Sequence
 
-from .model import SourceEntity
+from .model import BatteryNote, SourceEntity
 
 BATTERY_DEVICE_CLASS = "battery"
+
+_NUMERIC_SUFFIX = re.compile(r"_\d+$")
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+_BATTERY_SUFFIXES = (
+    "_battery_critical",
+    "_battery_level",
+    "_battery_state",
+    "_battery_low",
+    "_low_battery",
+    "_battery",
+    "_batt",
+)
 
 
 def filter_candidates(
@@ -29,3 +42,44 @@ def filter_candidates(
         and not entity.disabled
         and not entity.hidden
     ]
+
+
+def normalise_name(text: str) -> str:
+    """Reduce a display name to a comparable key. Shared by every name comparison."""
+    return _NON_ALNUM.sub("_", text.strip().lower()).strip("_")
+
+
+def name_stem(entity_id: str) -> str:
+    """Reduce an entity id to the name of the thing whose battery it describes."""
+    object_id = entity_id.split(".", 1)[-1]
+    object_id = _NUMERIC_SUFFIX.sub("", object_id)
+    for suffix in _BATTERY_SUFFIXES:
+        if object_id.endswith(suffix):
+            object_id = object_id[: -len(suffix)]
+            break
+    return _NUMERIC_SUFFIX.sub("", object_id)
+
+
+def group_into_cells(
+    entities: Sequence[SourceEntity],
+    notes: Sequence[BatteryNote] = (),
+) -> list[list[SourceEntity]]:
+    """Group a unit's entities into cells, one list of members per cell.
+
+    An entity named by an entity-level Battery Notes note is explicit truth and
+    forms its own cell. Everything else is grouped by name stem, which is the
+    only signal available inside a device and the weakest part of this design.
+    """
+    declared = {note.source_entity_id for note in notes if note.source_entity_id}
+
+    cells: list[list[SourceEntity]] = []
+    by_stem: dict[str, list[SourceEntity]] = {}
+
+    for entity in entities:
+        if entity.entity_id in declared:
+            cells.append([entity])
+            continue
+        by_stem.setdefault(name_stem(entity.entity_id), []).append(entity)
+
+    cells.extend(by_stem.values())
+    return cells
