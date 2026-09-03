@@ -76,9 +76,22 @@ def test_primary_refuses_to_guess_when_ambiguous() -> None:
     assert pick_primary_cell(cells, members, "Gamma") is None
 
 
-def test_no_percentage_cells_means_no_primary() -> None:
+def test_single_binary_only_cell_is_unambiguous() -> None:
+    """A unit with exactly one cell is unambiguous, even without a percentage."""
     cells = [Cell("c1", ("binary_sensor.a_battery_low",))]
     members = {"c1": [_entity("binary_sensor.a_battery_low", unit=None, state="off")]}
+    assert pick_primary_cell(cells, members, "A") == "c1"
+
+
+def test_no_percentage_cells_among_multiple_means_no_primary() -> None:
+    cells = [
+        Cell("c1", ("binary_sensor.a_battery_low",)),
+        Cell("c2", ("binary_sensor.b_battery_low",)),
+    ]
+    members = {
+        "c1": [_entity("binary_sensor.a_battery_low", unit=None, state="off")],
+        "c2": [_entity("binary_sensor.b_battery_low", unit=None, state="off")],
+    }
     assert pick_primary_cell(cells, members, "A") is None
 
 
@@ -150,11 +163,11 @@ def test_pick_primary_cell_zero_cells() -> None:
 
 
 def test_pick_primary_cell_one_cell_with_no_percentage_member() -> None:
-    """One cell with no percentage member means no primary."""
+    """A single cell is unambiguous even when it has no percentage member."""
     cells = [Cell("c1", ("binary_sensor.a_battery_low",))]
     members = {"c1": [_entity("binary_sensor.a_battery_low", unit=None, state="off")]}
     result = pick_primary_cell(cells, members, "A")
-    assert result is None
+    assert result == "c1"
 
 
 def test_pick_primary_cell_two_percentage_cells_neither_matches_device_name() -> None:
@@ -220,11 +233,11 @@ def test_pick_primary_cell_proves_no_positional_fallback() -> None:
 
 
 def test_pick_primary_cell_no_members_mapping_for_cell_id() -> None:
-    """If members_by_cell lacks a cell_id, that cell has no percentage member."""
+    """A single cell is unambiguous even if members_by_cell lacks its cell_id."""
     cells = [Cell("c1", ("sensor.test_battery",))]
     members: dict[str, list[SourceEntity]] = {}  # Empty, no members for c1
     result = pick_primary_cell(cells, members, "Test")
-    assert result is None
+    assert result == "c1"
 
 
 # Fix round 1 tests: prefix matching with mismatch distance

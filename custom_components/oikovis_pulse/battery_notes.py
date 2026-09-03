@@ -53,16 +53,22 @@ def pick_primary_cell(
     unresolved instead.
 
     Matching algorithm:
-    1. Filter to cells with percentage members.
-    2. If exactly one such cell, return it.
-    3. Find candidates: cells whose stem has a prefix relationship with the
+    1. If the unit has exactly one cell, return it. A single cell is
+       unambiguous by definition, regardless of whether it has a percentage
+       reading.
+    2. Filter to cells with percentage members.
+    3. If exactly one such cell, return it.
+    4. Find candidates: cells whose stem has a prefix relationship with the
        normalised device name (one startswith the other).
-    4. If exactly one candidate, return it.
-    5. If multiple candidates, prefer the one with the smallest mismatch
+    5. If exactly one candidate, return it.
+    6. If multiple candidates, prefer the one with the smallest mismatch
        (characters in one that aren't in the other).
-    6. If multiple candidates share the smallest mismatch, return None (ambiguous).
-    7. If no candidates, return None.
+    7. If multiple candidates share the smallest mismatch, return None (ambiguous).
+    8. If no candidates, return None.
     """
+    if len(cells) == 1:
+        return cells[0].cell_id
+
     percentage_cells = [
         cell
         for cell in cells
