@@ -5,6 +5,7 @@ from __future__ import annotations
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -27,7 +28,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up the four summary sensors."""
     coordinator: PulseCoordinator = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
-    async_add_entities(PulseSummarySensor(coordinator, key) for key in SUMMARY_KEYS)
+    device_info = DeviceInfo(
+        identifiers={(DOMAIN, entry.entry_id)},
+        name="Pulse",
+        manufacturer="Oikovis",
+    )
+    async_add_entities(PulseSummarySensor(coordinator, key, device_info) for key in SUMMARY_KEYS)
 
 
 class PulseSummarySensor(CoordinatorEntity[PulseCoordinator], SensorEntity):
@@ -36,11 +42,12 @@ class PulseSummarySensor(CoordinatorEntity[PulseCoordinator], SensorEntity):
     _attr_has_entity_name = True
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, coordinator: PulseCoordinator, key: str) -> None:
+    def __init__(self, coordinator: PulseCoordinator, key: str, device_info: DeviceInfo) -> None:
         super().__init__(coordinator)
         self._key = key
         self._attr_unique_id = f"{DOMAIN}_{key}"
         self._attr_name = key.replace("_", " ").capitalize()
+        self._attr_device_info = device_info
 
     @property
     def native_value(self) -> int:
