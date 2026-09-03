@@ -166,6 +166,47 @@ def test_all_members_unavailable_cell_still_appears() -> None:
     assert fleet[0].cells[0].reading_kind is ReadingKind.NONE
 
 
+def test_entity_level_note_wins_whole_cell_over_device_level_threshold() -> None:
+    """The primary cell already carries an entity-level note (its own
+    low_threshold). A device-level note on the same device carries a
+    different threshold. The entity-level note must win the whole cell,
+    including bn_low_threshold — not just battery_type/quantity/last_replaced."""
+    entities = [
+        _entity("sensor.lock_battery", unit="%", state="18"),
+        _entity("binary_sensor.lock_keypad_battery_critical", unit=None, state="off"),
+    ]
+    notes = [
+        BatteryNote(
+            source_entity_id="sensor.lock_battery",
+            device_id="dev-1",
+            battery_type="CR2032",
+            low_threshold=10.0,
+        ),
+        BatteryNote(source_entity_id=None, device_id="dev-1", low_threshold=15.0),
+    ]
+    meta = {"dev-1": UnitMeta(name="Lock", area_id=None)}
+    fleet = build_fleet(entities, notes, meta, [])
+    primary = next(c for c in fleet[0].cells if c.reading_kind is ReadingKind.PERCENTAGE)
+    assert primary.metadata.battery_type == "CR2032"
+    assert primary.metadata.bn_low_threshold == 10.0
+    assert primary.metadata.low_threshold == 20.0
+
+
+def test_device_level_note_threshold_applies_when_no_entity_level_note() -> None:
+    """The primary cell has no entity-level note. The device-level note's
+    threshold must still be applied (the fix must not simply disable it)."""
+    entities = [
+        _entity("sensor.lock_battery", unit="%", state="18"),
+        _entity("binary_sensor.lock_keypad_battery_critical", unit=None, state="off"),
+    ]
+    notes = [BatteryNote(source_entity_id=None, device_id="dev-1", low_threshold=15.0)]
+    meta = {"dev-1": UnitMeta(name="Lock", area_id=None)}
+    fleet = build_fleet(entities, notes, meta, [])
+    primary = next(c for c in fleet[0].cells if c.reading_kind is ReadingKind.PERCENTAGE)
+    assert primary.metadata.bn_low_threshold == 15.0
+    assert primary.metadata.low_threshold == 20.0
+
+
 def test_inputs_are_not_mutated() -> None:
     entities = [_entity("sensor.hall_sensor_battery")]
     notes = [BatteryNote(source_entity_id=None, device_id="dev-1", low_threshold=15.0)]

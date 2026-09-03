@@ -193,7 +193,7 @@ def build_fleet(
                         cell.metadata.battery_type = device_note.battery_type
                         cell.metadata.battery_quantity = device_note.battery_quantity
                         cell.metadata.last_replaced = device_note.last_replaced
-                    cell.metadata.bn_low_threshold = device_note.low_threshold
+                        cell.metadata.bn_low_threshold = device_note.low_threshold
                     cell.charging = _is_charging(cell.metadata.battery_type)
 
         units.append(
