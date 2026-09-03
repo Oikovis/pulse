@@ -80,8 +80,7 @@ def test_stress_no_entity_drops_or_duplicates() -> None:
     output_ids = set(all_entity_ids)
     assert input_ids == output_ids, f"Mismatch: input={input_ids}, output={output_ids}"
     assert len(all_entity_ids) == len(output_ids), (
-        f"Duplicate in output: {len(all_entity_ids)} items "
-        f"but {len(output_ids)} unique"
+        f"Duplicate in output: {len(all_entity_ids)} items " f"but {len(output_ids)} unique"
     )
 
 
@@ -105,8 +104,7 @@ def test_stress_noted_entity_not_in_stem_group() -> None:
 
     assert secondary_cell is not None, "Secondary entity missing"
     assert len(secondary_cell) == 1, (
-        f"Secondary should be alone, but cell has: "
-        f"{[e.entity_id for e in secondary_cell]}"
+        f"Secondary should be alone, but cell has: " f"{[e.entity_id for e in secondary_cell]}"
     )
     assert secondary_cell[0].entity_id == "sensor.lock_battery_secondary"
 
