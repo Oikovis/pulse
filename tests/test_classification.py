@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pytest
+
+from custom_components.oikovis_pulse import classification
 from custom_components.oikovis_pulse.classification import classify
 from custom_components.oikovis_pulse.model import CellClass, SourceEntity
 
@@ -181,3 +184,73 @@ def test_stress_mixed_members_some_excluded_some_not() -> None:
     ]
     result = classify(members)
     assert result is CellClass.EXCLUDED
+
+
+# Fix round 1: Conflict resolution tests (deterministic, order-independent)
+def test_fix_conflicting_domains_order_a(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Two members with different domain classes return same result in order A.
+
+    This test verifies the fix for order-dependence: the algorithm now collects
+    all domain defaults and resolves conflicts via severity order, making the
+    result deterministic regardless of member order.
+    """
+    monkeypatch.setitem(classification.DOMAIN_DEFAULTS, "domain_replaceable", CellClass.REPLACEABLE)
+    monkeypatch.setitem(classification.DOMAIN_DEFAULTS, "domain_built_in", CellClass.BUILT_IN)
+
+    members = [
+        _entity("sensor.a", platform="domain_replaceable"),
+        _entity("sensor.b", platform="domain_built_in"),
+    ]
+    result = classify(members)
+    # BUILT_IN is more restrictive than REPLACEABLE, so it should win
+    assert result is CellClass.BUILT_IN
+
+
+def test_fix_conflicting_domains_order_b(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Two members with different domain classes return same result in order B (reversed).
+
+    Verifies determinism: reversing member order gives the same classification.
+    """
+    monkeypatch.setitem(classification.DOMAIN_DEFAULTS, "domain_replaceable", CellClass.REPLACEABLE)
+    monkeypatch.setitem(classification.DOMAIN_DEFAULTS, "domain_built_in", CellClass.BUILT_IN)
+
+    members = [
+        _entity("sensor.b", platform="domain_built_in"),
+        _entity("sensor.a", platform="domain_replaceable"),
+    ]
+    result = classify(members)
+    # Same result as order_a: BUILT_IN wins
+    assert result is CellClass.BUILT_IN
+
+
+def test_fix_conflict_severity_excluded_beats_built_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When EXCLUDED and BUILT_IN conflict, EXCLUDED wins (more restrictive)."""
+    monkeypatch.setitem(classification.DOMAIN_DEFAULTS, "domain_built_in", CellClass.BUILT_IN)
+    monkeypatch.setitem(classification.DOMAIN_DEFAULTS, "domain_excluded", CellClass.EXCLUDED)
+
+    members = [
+        _entity("sensor.a", platform="domain_built_in"),
+        _entity("sensor.b", platform="domain_excluded"),
+    ]
+    result = classify(members)
+    assert result is CellClass.EXCLUDED
+
+
+def test_fix_one_known_one_unknown_order_a() -> None:
+    """One known + one unknown domain in order A: known domain decides."""
+    members = [
+        _entity("sensor.a", platform="mobile_app"),  # BUILT_IN
+        _entity("sensor.b", platform="unknown_domain"),  # unknown
+    ]
+    result = classify(members)
+    assert result is CellClass.BUILT_IN
+
+
+def test_fix_one_known_one_unknown_order_b() -> None:
+    """One known + one unknown domain in order B (reversed): same result."""
+    members = [
+        _entity("sensor.b", platform="unknown_domain"),  # unknown
+        _entity("sensor.a", platform="mobile_app"),  # BUILT_IN
+    ]
+    result = classify(members)
+    assert result is CellClass.BUILT_IN
