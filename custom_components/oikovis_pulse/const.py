@@ -12,3 +12,5 @@ STATIC_PATH: str = "/oikovis_pulse_static"
 FRONTEND_SCRIPT_URL: str = f"{STATIC_PATH}/pulse.js"
 
 PANEL_COMPONENT_NAME: str = "oikovis-pulse-panel"
+
+DATA_COORDINATOR: str = "coordinator"
